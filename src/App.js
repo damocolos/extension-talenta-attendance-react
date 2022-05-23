@@ -11,18 +11,21 @@ function App() {
   const [showOptions, setShowOptions] = useState(false);
   const [optionsForm, setOptionsForm] = useState({});
 
-  const URL = 'https://hr.talenta.co/api';
+  const URL = 'https://resilient-cat-092f6d.netlify.app/.netlify/functions/api';
 
   useEffect(() => {
     chrome.storage.sync.get('talentaConfig', ({ talentaConfig }) => {
       setConfig(talentaConfig);
       setOptionsForm(talentaConfig);
-      if (talentaConfig.authCookie != '') {
-        getHistory();
-        getUserProfile();
-      }
     });
   }, []);
+
+  useEffect(() => {
+    if (config.authCookie && config.authCookie != '') {
+      getHistory();
+      getUserProfile();
+    }
+  }, [config]);
 
   const onToggleOptions = () => {
     setShowOptions(!showOptions);
@@ -70,14 +73,16 @@ function App() {
 
   const getHistory = async () => {
     const resp = await axios({
-      url: `${URL}/web/live-attendance/history?date=${getTodayDate()}`,
-      headers: {
-        Cookie: config.authCookie,
+      method: 'post',
+      url: `${URL}/history`,
+      data: {
+        token: config.authCookie,
+        date: getTodayDate(),
       },
-    });
+    }).catch((err) => console.log(err));
 
-    if (resp?.data?.data?.history) {
-      const respHistory = resp.data.data.history;
+    if (resp?.data) {
+      const respHistory = resp.data;
 
       setHistory([]);
 
@@ -104,36 +109,29 @@ function App() {
 
   const getUserProfile = async () => {
     const resp = await axios({
-      url: `${URL}/web/my-info/index`,
-      headers: {
-        Cookie: config.authCookie,
+      method: 'post',
+      url: `${URL}/profile`,
+      data: {
+        token: config.authCookie,
       },
     });
-    if (resp?.data?.data?.profile_employee) {
-      setProfile(resp.data.data.profile_employee);
+    if (resp?.data) {
+      setProfile(resp.data);
     }
   };
 
   const onClock = async (type) => {
     setIsLoading(true);
 
-    const encodedLatitude = encodeLocation(config.latitude);
-    const encodedLongitude = encodeLocation(config.longitude);
-
-    const formData = new FormData();
-
-    formData.append('longitude', encodedLongitude);
-    formData.append('latitude', encodedLatitude);
-    formData.append('status', type === 3 ? 'checkout' : 'checkin');
-    formData.append('description', '');
-
     const resp = await axios({
       method: 'post',
-      url: `${URL}/web/live-attendance/request`,
-      headers: {
-        Cookie: config.authCookie,
+      url: `${URL}/live-attendance`,
+      data: {
+        token: config.authCookie,
+        latitude: config.latitude,
+        longitude: config.longitude,
+        type: type === 3 ? 'checkout' : 'checkin',
       },
-      data: formData,
     });
 
     if (resp) {
@@ -143,14 +141,6 @@ function App() {
     }
 
     setIsLoading(false);
-  };
-
-  const encodeLocation = (loc) => {
-    return btoa(loc).replace(/[a-zA-Z]/g, function (c) {
-      return String.fromCharCode(
-        (c <= 'Z' ? 90 : 122) >= (c = c.charCodeAt(0) + 13) ? c : c - 26
-      );
-    });
   };
 
   return (

@@ -5,7 +5,7 @@
     "default_popup": "index.html"
   },
   "host_permissions": [
-    "https://hr.talenta.co/*"
+    "https://resilient-cat-092f6d.netlify.app/*"
   ],
   "background": {
     "service_worker": "js/background.js"
