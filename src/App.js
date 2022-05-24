@@ -4,10 +4,13 @@ import axios from 'axios';
 
 function App() {
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [history, setHistory] = useState([]);
   const [attendanceStatus, setAttendanceStatus] = useState(0);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [profile, setProfile] = useState({});
   const [config, setConfig] = useState({});
+  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
   const [optionsForm, setOptionsForm] = useState({});
 
@@ -32,7 +35,7 @@ function App() {
   };
 
   const onSaveOption = () => {
-    setShowOptions(false);
+    setIsLoadingOptions(true);
     chrome.storage.sync.set(
       {
         talentaConfig: optionsForm,
@@ -42,6 +45,8 @@ function App() {
         setTimeout(() => {
           getHistory();
           getUserProfile();
+          setIsLoadingOptions(false);
+          setShowOptions(false);
         }, 500);
       }
     );
@@ -72,6 +77,8 @@ function App() {
   };
 
   const getHistory = async () => {
+    setIsLoadingHistory(true);
+
     const resp = await axios({
       method: 'post',
       url: `${URL}/history`,
@@ -105,9 +112,12 @@ function App() {
         setAttendanceStatus(1);
       }
     }
+
+    setIsLoadingHistory(false);
   };
 
   const getUserProfile = async () => {
+    setIsLoadingProfile(true);
     const resp = await axios({
       method: 'post',
       url: `${URL}/profile`,
@@ -118,6 +128,7 @@ function App() {
     if (resp?.data) {
       setProfile(resp.data);
     }
+    setIsLoadingProfile(false);
   };
 
   const onClock = async (type) => {
@@ -147,46 +158,47 @@ function App() {
     <div className='App'>
       {!showOptions && (
         <>
-          <h5>Talenta Clockin / Clockout</h5>
-
-          <button onClick={onToggleOptions}>Setting</button>
+          <h5>Talenta Live Attendance</h5>
 
           {config.authCookie !== '' && (
             <div id='content'>
-              {profile?.full_name && (
-                <strong>
-                  <p id='greeting'>Halo {profile?.full_name}</p>
-                  {config && (
-                    <p>
-                      {config.latitude},{config.longitude}
-                    </p>
-                  )}
-                </strong>
-              )}
-
-              <p>Today {getTodayDateLong()}</p>
-
-              <div id='list'>
-                {history.length > 0 &&
-                  history.map((h) => (
-                    <p key={h.time}>
-                      {h.type} - {h.time}
-                    </p>
-                  ))}
-              </div>
-
-              {attendanceStatus === 1 && (
+              {isLoadingProfile && <p>Loading Profile...</p>}
+              {!isLoadingProfile && (
                 <>
-                  <p>You haven&lsquo;t made attendance today</p>
-                  <button onClick={() => onClock(2)} disabled={isLoading}>
-                    {isLoading ? 'loading...' : 'Clockin'}
-                  </button>
+                  {profile?.full_name && (
+                    <strong>
+                      <p id='greeting'>Halo {profile?.full_name}</p>
+                    </strong>
+                  )}
+                  <p>Today {getTodayDateLong()}</p>
                 </>
               )}
-              {attendanceStatus === 2 && (
-                <button onClick={() => onClock(3)} disabled={isLoading}>
-                  {isLoading ? 'loading...' : 'Clockout'}
-                </button>
+              {isLoadingHistory && <p>Loading History...</p>}
+              {!isLoadingHistory && (
+                <>
+                  <div id='list'>
+                    {history.length > 0 &&
+                      history.map((h) => (
+                        <p key={h.time}>
+                          {h.type} - {h.time}
+                        </p>
+                      ))}
+                  </div>
+
+                  {attendanceStatus === 1 && (
+                    <>
+                      <p>You haven&lsquo;t made attendance today</p>
+                      <button onClick={() => onClock(2)} disabled={isLoading}>
+                        {isLoading ? 'loading...' : 'Clockin'}
+                      </button>
+                    </>
+                  )}
+                  {attendanceStatus === 2 && (
+                    <button onClick={() => onClock(3)} disabled={isLoading}>
+                      {isLoading ? 'loading...' : 'Clockout'}
+                    </button>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -194,12 +206,14 @@ function App() {
           {config.authCookie === '' && (
             <p>Settings not found, please update the setting</p>
           )}
+
+          <button onClick={onToggleOptions}>Setting</button>
         </>
       )}
 
       {showOptions && (
         <>
-          <h5>Talenta Clockin / Clockout Setting</h5>
+          <h5>Talenta Live Attendance Setting</h5>
 
           <fieldset>
             <label>Token</label>
@@ -226,7 +240,14 @@ function App() {
               name='longitude'
             />
 
-            <button onClick={onSaveOption}>Save</button>
+            <div>
+              <button onClick={onSaveOption} disbaled={isLoadingOptions}>
+                {isLoadingOptions ? 'loading...' : 'Save'}
+              </button>
+            </div>
+            <div>
+              <button onClick={onToggleOptions}>Cancel</button>
+            </div>
           </fieldset>
         </>
       )}
