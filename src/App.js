@@ -60,9 +60,9 @@ function App() {
 
   const getTodayDate = () => {
     const today = new Date();
-    return `${today.getDate()}-${('0' + (today.getMonth() + 1)).slice(
+    return `${today.getFullYear()}-${('0' + (today.getMonth() + 1)).slice(
       -2
-    )}-${today.getFullYear()}`;
+    )}-${today.getDate()}`;
   };
 
   const getTodayDateLong = () => {
