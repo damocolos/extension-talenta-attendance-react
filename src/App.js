@@ -13,6 +13,7 @@ function App() {
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
   const [optionsForm, setOptionsForm] = useState({});
+  const [isInvalidToken, setIsInvalidToken] = useState(false);
 
   const URL = 'https://resilient-cat-092f6d.netlify.app/.netlify/functions/api';
 
@@ -43,8 +44,6 @@ function App() {
       function () {
         setConfig(optionsForm);
         setTimeout(() => {
-          getHistory();
-          getUserProfile();
           setIsLoadingOptions(false);
           setShowOptions(false);
         }, 500);
@@ -78,38 +77,45 @@ function App() {
 
   const getHistory = async () => {
     setIsLoadingHistory(true);
+    setIsInvalidToken(false);
 
-    const resp = await axios({
-      method: 'post',
-      url: `${URL}/history`,
-      data: {
-        token: config.authCookie,
-        date: getTodayDate(),
-      },
-    }).catch((err) => console.log(err));
+    try {
+      const resp = await axios({
+        method: 'post',
+        url: `${URL}/history`,
+        data: {
+          token: config.authCookie,
+          date: getTodayDate(),
+        },
+      });
 
-    if (resp?.data) {
-      const respHistory = resp.data;
+      if (resp?.data) {
+        const respHistory = resp.data;
 
-      setHistory([]);
+        setHistory([]);
 
-      if (respHistory.length) {
-        const result = respHistory.map((j) => ({
-          type: j.check_type === 1 ? 'clockin' : 'clockout',
-          time: j.check_time,
-        }));
+        if (respHistory.length) {
+          const result = respHistory.map((j) => ({
+            type: j.check_type === 1 ? 'clockin' : 'clockout',
+            time: j.check_time,
+          }));
 
-        setHistory(result);
+          setHistory(result);
 
-        for (const r of result) {
-          if (r.type === 'clockin' && attendanceStatus !== 3) {
-            setAttendanceStatus(2);
-          } else if (r.type === 'clockout') {
-            setAttendanceStatus(3);
+          for (const r of result) {
+            if (r.type === 'clockin' && attendanceStatus !== 3) {
+              setAttendanceStatus(2);
+            } else if (r.type === 'clockout') {
+              setAttendanceStatus(3);
+            }
           }
+        } else {
+          setAttendanceStatus(1);
         }
-      } else {
-        setAttendanceStatus(1);
+      }
+    } catch (err) {
+      if (err?.response?.data?.status == 401) {
+        setIsInvalidToken(true);
       }
     }
 
@@ -118,16 +124,25 @@ function App() {
 
   const getUserProfile = async () => {
     setIsLoadingProfile(true);
-    const resp = await axios({
-      method: 'post',
-      url: `${URL}/profile`,
-      data: {
-        token: config.authCookie,
-      },
-    });
-    if (resp?.data) {
-      setProfile(resp.data);
+    setIsInvalidToken(false);
+
+    try {
+      const resp = await axios({
+        method: 'post',
+        url: `${URL}/profile`,
+        data: {
+          token: config.authCookie,
+        },
+      });
+      if (resp?.data) {
+        setProfile(resp.data);
+      }
+    } catch (err) {
+      if (err?.response?.data?.status == 401) {
+        setIsInvalidToken(true);
+      }
     }
+
     setIsLoadingProfile(false);
   };
 
@@ -162,6 +177,9 @@ function App() {
 
           {config.authCookie !== '' && (
             <div id='content'>
+              {isInvalidToken && (
+                <p>Invalid credentials. Please check token and try again</p>
+              )}
               {isLoadingProfile && <p>Loading Profile...</p>}
               {!isLoadingProfile && (
                 <>
@@ -170,7 +188,7 @@ function App() {
                       <p id='greeting'>Halo {profile?.full_name}</p>
                     </strong>
                   )}
-                  <p>Today {getTodayDateLong()}</p>
+                  {!isInvalidToken && <p>Today {getTodayDateLong()}</p>}
                 </>
               )}
               {isLoadingHistory && <p>Loading History...</p>}
