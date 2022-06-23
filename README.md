@@ -46,7 +46,7 @@ npm run build
 7. Turn on developer mode
 8. Load extension to build folder
 
-[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/dhaGRJvJAII/0.jpg)](https://www.youtube.com/watch?v=dhaGRJvJAII&ab_channel=TroubleChute)
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/dhaGRJvJAII/0.jpg)](https://youtu.be/dhaGRJvJAII?t=62)
 
 ## How to develop
 
